@@ -53,7 +53,7 @@ def _load_models():
         print("HUGGINGFACE_TOKEN not set, diarization pipeline will not be loaded.")
 
     # Load NLP model for title suggestions
-    title_suggestion_pipeline = pipeline("summarization", model="pszemraj/long-t5-tglobal-xl-16384-book-summary")
+    title_suggestion_pipeline = pipeline("summarization", model="google-t5/t5-small")
     
     models_loaded = True
     print("Models loaded successfully.")
