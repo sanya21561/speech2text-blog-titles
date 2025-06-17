@@ -12,11 +12,12 @@ import numpy as np
 from transformers import pipeline
 from .models import TranscriptionResult, TitleSuggestion
 from django.contrib.auth.models import User
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.settings import api_settings
 from .serializers import UserSerializer
+from django.contrib.auth import authenticate
 
 load_dotenv()
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
@@ -134,7 +135,10 @@ class AudioTranscriptionView(APIView):
         except Exception as e:
             if os.path.exists('temp_audio.wav'):
                 os.remove('temp_audio.wav')
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            error_msg = str(e)
+            if "temp_audio.wav" in error_msg and "No such file or directory" in error_msg:
+                return Response({'error': 'Timed out or file error, please upload your file again for transcription.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': error_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class BlogTitleSuggestionView(APIView):
     permission_classes = [IsAuthenticated]
@@ -167,16 +171,33 @@ class BlogTitleSuggestionView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class RegisterUserView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        if User.objects.filter(username=username).exists():
+            return Response({'error': 'User already registered. Please login.'}, status=status.HTTP_400_BAD_REQUEST)
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
             token, created = Token.objects.get_or_create(user=user)
-            return Response({'token': token.key, 'user_id': user.pk, 'username': user.username}, status=status.HTTP_201_CREATED)
+            return Response({'message': 'Registration successful! Please login now!'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class LoginUserView(ObtainAuthToken):
+class LoginUserView(APIView):
+    permission_classes = [AllowAny]
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
+
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        if not User.objects.filter(username=username).exists():
+            return Response({'error': 'User not registered.'}, status=status.HTTP_400_BAD_REQUEST)
+        user = authenticate(username=username, password=password)
+        if user is None:
+            return Response({'error': 'Incorrect password.'}, status=status.HTTP_400_BAD_REQUEST)
+        token, created = Token.objects.get_or_create(user=user)
+        return Response({'token': token.key, 'user_id': user.pk, 'username': user.username}, status=status.HTTP_200_OK)
 
 class UserHistoryView(APIView):
     permission_classes = [IsAuthenticated]

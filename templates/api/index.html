@@ -229,14 +229,13 @@
                 });
                 const data = await response.json();
                 
-                if (response.ok) {
+                if (response.ok && data.message) {
                     registerMessage.className = 'mt-2 text-success';
-                    registerMessage.textContent = 'Registration successful! Please log in.';
-                    // Clear the form
+                    registerMessage.textContent = data.message;
                     registerForm.reset();
                 } else {
                     registerMessage.className = 'mt-2 text-danger';
-                    registerMessage.textContent = 'Registration failed: ' + JSON.stringify(data);
+                    registerMessage.textContent = data.error || 'Registration failed.';
                 }
             } catch (error) {
                 console.error('Registration error:', error);
@@ -276,7 +275,7 @@
                     localStorage.removeItem('authToken');
                     localStorage.removeItem('currentUsername');
                     loginMessage.className = 'mt-2 text-danger';
-                    loginMessage.textContent = 'Login failed: ' + (data.non_field_errors ? data.non_field_errors[0] : JSON.stringify(data));
+                    loginMessage.textContent = data.error || 'Login failed.';
                 }
             } catch (error) {
                 console.error('Login error:', error);
@@ -333,7 +332,11 @@
                     resultDiv.innerHTML = html;
                     fetchUserHistory(); // Refresh history after successful transcription
                 } else {
-                    resultDiv.textContent = 'Error: ' + (data.detail || data.error || 'Unknown error occurred');
+                    let errorMsg = data.detail || data.error || 'Unknown error occurred';
+                    if (errorMsg.includes('temp_audio.wav')) {
+                        errorMsg = 'Timed out or file error, please upload your file again for transcription.';
+                    }
+                    resultDiv.textContent = 'Error: ' + errorMsg;
                 }
             } catch (error) {
                 console.error('Error:', error);
