@@ -54,7 +54,7 @@ def _load_models():
         print("HUGGINGFACE_TOKEN not set, diarization pipeline will not be loaded.")
 
     # Load NLP model for title suggestions
-    title_suggestion_pipeline = pipeline("text2text-generation", model="EnglishVoice/t5-base-keywords-to-headline", device="cpu")
+    title_suggestion_pipeline = pipeline("text2text-generation", model="JulesBelveze/t5-small-headline-generator", device="cpu")
     
     models_loaded = True
     print("Models loaded successfully.")
@@ -152,11 +152,16 @@ class BlogTitleSuggestionView(APIView):
 
         try:
             # Generate title suggestions
-            prompt_text = "headline: " + content
-            suggestions = []
-            for _ in range(3): 
-                generated_text = title_suggestion_pipeline(prompt_text, max_new_tokens=20, num_return_sequences=1)[0]['generated_text']
-                suggestions.append(generated_text.strip())
+            results = title_suggestion_pipeline(
+                content,
+                max_new_tokens=15,
+                num_return_sequences=3,
+                do_sample=True,
+                top_k=50,
+                top_p=0.95,
+                num_beams=1
+            )
+            suggestions = [r['generated_text'].strip() for r in results]
 
             # Save title suggestion result to database
             TitleSuggestion.objects.create(

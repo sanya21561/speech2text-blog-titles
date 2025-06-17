@@ -1,114 +1,179 @@
 # Speech2Text Blog Titles
 
-A Django application that provides audio transcription with speaker diarization and AI-powered blog title suggestions.
+A Django web app for:
+- **Speaker-diarized audio transcription** (using Whisper + pyannote.audio)
+- **AI-powered blog title suggestions** (using HuggingFace headline generation models)
+- **User registration, login, and history**
 
-## Features
+---
 
-1. **Audio Transcription with Diarization**
-   - Transcribes audio files using OpenAI's Whisper
-   - Identifies different speakers using pyannote.audio
-   - Supports multiple languages
-   - Returns structured JSON output
+## Project Structure
 
-2. **AI Blog Title Suggestions**
-   - Generates 3 potential titles for blog posts
-   - Uses `pszemraj/long-t5-tglobal-xl-16384-book-summary` model from HuggingFace for NLP
-   - RESTful API endpoint for easy integration
-
-## Setup Instructions
-
-1. Create a virtual environment:
-```bash
-python3.11 -m venv venv311
-source venv311/bin/activate  # On Windows: venv311\Scripts\activate
+```
+speech2text_blog_titles/
+├── api/                # Django app with API endpoints and logic
+├── speech2text_blog/   # Django project settings
+├── templates/api/      # Frontend HTML (single-page app)
+├── speech2text_example/
+│   ├── Conversation 1.mp3
+│   └── conversation1_transcription.png
+├── blog_sample_output.png
+├── login_page.png
+├── db.sqlite3          # SQLite database (created after first run)
+├── requirements.txt
+├── README.md
+└── ...
 ```
 
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+---
 
-3. Set up environment variables:
-Create a `.env` file in the project root with:
-```
-HUGGINGFACE_TOKEN=your_huggingface_token
-```
+## Project Description
 
-4. Run migrations:
-```bash
-python manage.py migrate
-```
+This app lets you:
+- Upload an audio file and get a **speaker-diarized transcript** (who said what, when)
+- Paste a blog draft and get **AI-generated blog title suggestions**
+- Register/login to save your history
+- Works for English and many other languages (Whisper supports Hindi, etc.)
 
-5. Start the development server:
-```bash
-python manage.py runserver
-```
+---
+
+## Installation & Setup
+
+1. **Clone the repo:**
+   ```bash
+   git clone https://github.com/sanya21561/speech2text-blog-titles
+   cd speech2text_blog_titles
+   ```
+2. **Create a virtual environment (Python 3.11 recommended):**
+   ```bash
+   python3.11 -m venv venv311
+   source venv311/bin/activate
+   ```
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. **Set up HuggingFace token:**
+   - Create a `.env` file with your HuggingFace token:
+     ```
+     HUGGINGFACE_TOKEN=your_hf_token_here
+     ```
+   - Accept model conditions for `pyannote/speaker-diarization-3.1` on the HuggingFace website.
+5. **Run migrations:**
+   ```bash
+   python manage.py migrate
+   ```
+6. **Create a superuser (optional, for admin):**
+   ```bash
+   python manage.py createsuperuser
+   ```
+7. **Run the server:**
+   ```bash
+   python manage.py runserver
+   ```
+8. **Open the app:**
+   Go to [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+
+---
 
 ## API Endpoints
 
-### 1. Audio Transcription with Diarization
-- **Endpoint**: `/api/transcribe/`
-- **Method**: POST
-- **Input**: Audio file (supported formats: wav, mp3)
-- **Output**: JSON with transcription and speaker information
+All endpoints return **valid JSON** and handle errors gracefully.
 
-Example response:
-```json
-{
-    "transcription": [
-        {
-            "speaker": "SPEAKER_1",
-            "text": "Hello, how are you?",
-            "start_time": 0.0,
-            "end_time": 2.5
-        },
-        {
-            "speaker": "SPEAKER_2",
-            "text": "I'm doing great, thank you!",
-            "start_time": 2.5,
-            "end_time": 4.8
-        }
-    ]
-}
-```
+### `/api/register/`  
+- **POST** `{ "username": ..., "password": ... }`
+- **Response:** `{ "message": ... }` or `{ "error": ... }`
+- **Errors:** Already registered, missing fields, etc.
 
-### 2. Blog Title Suggestions
-- **Endpoint**: `/api/suggest-titles/`
-- **Method**: POST
-- **Input**: Blog post content
-- **Output**: JSON with 3 title suggestions
+### `/api/login/`  
+- **POST** `{ "username": ..., "password": ... }`
+- **Response:** `{ "token": ..., "user_id": ..., "username": ... }` or `{ "error": ... }`
+- **Errors:** Not registered, incorrect password, etc.
 
-Example response:
-```json
-{
-    "suggestions": [
-        "The Future of AI in Healthcare",
-        "How AI is Revolutionizing Medical Diagnosis",
-        "AI and Healthcare: A Perfect Partnership"
-    ]
-}
-```
+### `/api/transcribe/`  
+- **POST** (multipart/form-data, `audio_file`)
+- **Requires:** Auth token in `Authorization: Token ...` header
+- **Response:** `{ "transcription": [ { "speaker": ..., "text": ..., ... }, ... ] }` or `{ "error": ... }`
+- **Errors:** File missing, file error, timeout, etc.
 
-## Note
-This project requires a HuggingFace token for accessing models like `pyannote.audio`. You can obtain a token by:
-1. Creating an account on HuggingFace.
-2. Visiting the model page (e.g., `https://hf.co/pyannote/speaker-diarization-3.1`) and accepting the user conditions, if prompted.
-3. Generating a token in your HuggingFace account settings (Profile -> Settings -> Access Tokens).
+### `/api/suggest-titles/`  
+- **POST** `{ "content": ... }`
+- **Requires:** Auth token
+- **Response:** `{ "suggestions": [ ... ] }` or `{ "error": ... }`
+- **Errors:** Input too long, model error, etc.
 
-## Demo
+### `/api/history/`  
+- **GET**
+- **Requires:** Auth token
+- **Response:** `{ "transcriptions": [...], "title_suggestions": [...] }`
 
-You can try out the diarization and transcription feature using the provided example audio file and see the expected output.
+**Where are results stored?**
+- All transcriptions and title suggestions can be viewed on frontend in the History section. They are also stored in the SQLite database (`db.sqlite3`) and are accessible via `/api/history/` and Django admin. 
 
-**Example files:**
-- `speech2text_example/Conversation 1.mp3` — Example audio file with multiple speakers.
-- `speech2text_example/conversation1_transcription.png` — Screenshot of the diarized transcription result.
+---
 
-**How it works:**
-1. Go to the web interface.
-2. Upload `Conversation 1.mp3` from the `speech2text_example` folder.
-3. Click **Transcribe**.
-4. You will see a diarized, speaker-separated transcript similar to the screenshot below.
+## Registration & Login Demo
+
+- Register a new user or login with existing credentials.
+- Friendly error messages for duplicate registration, wrong password, or unregistered users.
+
+![Login Page Demo](login_page.png)
+
+---
+
+## Speech Transcription & Diarization Sample Output
+
+- Upload an audio file (e.g., `speech2text_example/Conversation 1.mp3`)
+- Get a diarized transcript (see below):
 
 ![Diarized Transcription Example](speech2text_example/conversation1_transcription.png)
 
---- 
+---
+
+## Blog Title Generation Demo
+
+**Sample Input:**
+```
+The fields of Data Science, Artificial Intelligence (AI), and Large Language Models (LLMs) continue to evolve at an unprecedented pace. To keep up with these rapid developments, it's crucial to stay informed through reliable and insightful sources.
+
+In this blog, we will explore the top 7 LLM, data science, and AI blogs of 2024 that have been instrumental in disseminating detailed and updated information in these dynamic fields.
+```
+
+**Sample Output:**
+
+![Blog Title Output Demo](blog_sample_output.png)
+
+---
+
+## Model Details
+
+- **Transcription:**
+  - [openai/whisper](https://github.com/openai/whisper) ("base" model, supports English, Hindi, and many other languages)
+  - [pyannote/speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1) for speaker separation
+- **Blog Title Suggestions:**
+  - [JulesBelveze/t5-small-headline-generator](https://huggingface.co/JulesBelveze/t5-small-headline-generator) (T5-small, fine-tuned for headlines)
+
+---
+
+## Limitations
+- **Max input length:** Blog content for title suggestions should be under 384 tokens (about 1-2 paragraphs)
+- **Model creativity:** Open models may sometimes produce generic or incomplete titles
+- **Audio:** Long audio files may take time to process; diarization may not always perfectly separate speakers
+- **Language support:** Whisper supports many languages, but diarization is best for English
+
+---
+
+## Bonus Features
+- **Whisper and pyannote.audio support Hindi and many other languages** (for transcription)
+- **User history:** All your transcriptions and title suggestions are saved and viewable after login
+- **Friendly error handling:** All endpoints return clear error messages for missing files, timeouts, or invalid input
+
+---
+
+## Example Files
+- `speech2text_example/Conversation 1.mp3` — Example audio file
+- `speech2text_example/conversation1_transcription.png` — Example diarized transcript
+- `blog_sample_output.png` — Example blog title output
+- `login_page.png` — Example login/registration page
+
+---
