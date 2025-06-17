@@ -97,11 +97,85 @@ All endpoints return **valid JSON** and handle errors gracefully.
 - **Response:** `{ "transcription": [ { "speaker": ..., "text": ..., ... }, ... ] }` or `{ "error": ... }`
 - **Errors:** File missing, file error, timeout, etc.
 
+**Example Response:**
+```json
+{
+    "transcription": [
+        {
+            "speaker": "SPEAKER_02",
+            "text": "So what have you been up to recently?",
+            "start_time": 0.0,
+            "end_time": 2.12
+        },
+        {
+            "speaker": "SPEAKER_00",
+            "text": "Quite a lot actually. I've been away on business a couple of times and I'm going away again in the next few months.",
+            "start_time": 2.68,
+            "end_time": 9.38
+        },
+        {
+            "speaker": "SPEAKER_01",
+            "text": "Oh really? Where to?",
+            "start_time": 9.8,
+            "end_time": 11.0
+        },
+        {
+            "speaker": "SPEAKER_00",
+            "text": "Madrid. Our company is opening a new office there.",
+            "start_time": 11.48,
+            "end_time": 14.58
+        },
+        {
+            "speaker": "SPEAKER_02",
+            "text": "Cool. It's been a long time since I was in Madrid, but I'm sure you'll like it.",
+            "start_time": 15.1,
+            "end_time": 19.42
+        },
+        {
+            "speaker": "SPEAKER_00",
+            "text": "Yeah, I'm looking forward to the trip.",
+            "start_time": 19.82,
+            "end_time": 21.6
+        },
+        {
+            "speaker": "SPEAKER_00",
+            "text": "Anyway, how are things with you? Do you still see Dave?",
+            "start_time": 22.36,
+            "end_time": 25.5
+        },
+        {
+            "speaker": "SPEAKER_02",
+            "text": "Hmm, once in a while. Not so much now he's moved away. What about you?",
+            "start_time": 26.259999999999998,
+            "end_time": 30.64
+        },
+        {
+            "speaker": "SPEAKER_00",
+            "text": "No, actually we lost touch.",
+            "start_time": 31.32,
+            "end_time": 32.9
+        }
+    ]
+}
+```
+
 ### `/api/suggest-titles/`  
 - **POST** `{ "content": ... }`
 - **Requires:** Auth token
 - **Response:** `{ "suggestions": [ ... ] }` or `{ "error": ... }`
 - **Errors:** Input too long, model error, etc.
+
+
+**Example Response:**
+```json
+{
+  "suggestions": [
+    "The Top 7 LLM, Data Science, and AI Blogs of 2024",
+    "Top 7 LLM Blogs in 2024 - A Look",
+    "Data Science – The Top 7 LLM, Data Science, and AI"
+  ]
+}
+```
 
 ### `/api/history/`  
 - **GET**
@@ -139,7 +213,7 @@ The fields of Data Science, Artificial Intelligence (AI), and Large Language Mod
 
 In this blog, we will explore the top 7 LLM, data science, and AI blogs of 2024 that have been instrumental in disseminating detailed and updated information in these dynamic fields.
 
-These blogs stand out as they make deep, complex topics easy to understand for a broader audience. Whether you’re an expert, a curious learner, or just love data science and AI, there’s something here for you to learn about the fundamental concepts. They cover everything from the basics like embeddings and vector databases to the newest breakthroughs in tools.
+These blogs stand out as they make deep, complex topics easy to understand for a broader audience. Whether you're an expert, a curious learner, or just love data science and AI, there's something here for you to learn about the fundamental concepts. They cover everything from the basics like embeddings and vector databases to the newest breakthroughs in tools.
 ```
 
 **Sample Output:**
