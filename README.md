@@ -9,6 +9,7 @@ A Django web app for:
 
 ## Project Structure
 
+```
 speech2text_blog_titles/
 ├── api/                    # Django app with API endpoints and logic
 ├── speech2text_blog/       # Django project settings
