@@ -153,6 +153,7 @@ In this blog, we will explore the top 7 LLM, data science, and AI blogs of 2024 
   - [pyannote/speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1) for speaker separation
 - **Blog Title Suggestions:**
   - [JulesBelveze/t5-small-headline-generator](https://huggingface.co/JulesBelveze/t5-small-headline-generator) (T5-small, fine-tuned for headlines)
+- **Blog Title Generation Model:** [Michau/t5-base-en-generate-headline](https://huggingface.co/Michau/t5-base-en-generate-headline) — fine-tuned for generating concise, relevant headlines from article/blog content.
 
 ---
 
