@@ -93,4 +93,22 @@ Example response:
 This project requires a HuggingFace token for accessing models like `pyannote.audio`. You can obtain a token by:
 1. Creating an account on HuggingFace.
 2. Visiting the model page (e.g., `https://hf.co/pyannote/speaker-diarization-3.1`) and accepting the user conditions, if prompted.
-3. Generating a token in your HuggingFace account settings (Profile -> Settings -> Access Tokens). 
+3. Generating a token in your HuggingFace account settings (Profile -> Settings -> Access Tokens).
+
+## Demo
+
+You can try out the diarization and transcription feature using the provided example audio file and see the expected output.
+
+**Example files:**
+- `speech2text_example/Conversation 1.mp3` — Example audio file with multiple speakers.
+- `speech2text_example/conversation1_transcription.png` — Screenshot of the diarized transcription result.
+
+**How it works:**
+1. Go to the web interface.
+2. Upload `Conversation 1.mp3` from the `speech2text_example` folder.
+3. Click **Transcribe**.
+4. You will see a diarized, speaker-separated transcript similar to the screenshot below.
+
+![Diarized Transcription Example](speech2text_example/conversation1_transcription.png)
+
+--- 

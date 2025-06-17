@@ -37,7 +37,7 @@ def _load_models():
 
     print("Loading models... This may take some time the first time.")
     # Load Whisper model
-    whisper_model = whisper.load_model("base")
+    whisper_model = whisper.load_model("base", device="cpu")
 
     # Load Pyannote Audio pipeline (requires HuggingFace token)
     if HUGGINGFACE_TOKEN:
@@ -53,7 +53,7 @@ def _load_models():
         print("HUGGINGFACE_TOKEN not set, diarization pipeline will not be loaded.")
 
     # Load NLP model for title suggestions
-    title_suggestion_pipeline = pipeline("summarization", model="google-t5/t5-small")
+    title_suggestion_pipeline = pipeline("text2text-generation", model="EnglishVoice/t5-base-keywords-to-headline", device="cpu")
     
     models_loaded = True
     print("Models loaded successfully.")
@@ -92,16 +92,23 @@ class AudioTranscriptionView(APIView):
                 diarization = diarization_pipeline({"waveform": waveform, "sample_rate": sample_rate})
 
                 # Process segments and assign speakers
-                for turn, track, label in diarization.crop(f={"waveform": waveform, "sample_rate": sample_rate}, focus=segment):
-                    speaker = label
-                    break # Take the first speaker found in the segment
+                for segment in segments:
+                    segment_start = segment['start']
+                    segment_end = segment['end']
+                    speaker = "Unknown"
 
-                transcription_output.append({
-                    "speaker": speaker,
-                    "text": text.strip(),
-                    "start_time": start,
-                    "end_time": end
-                })
+                    # Find overlapping diarization turns
+                    for turn, _, label in diarization.itertracks(yield_label=True):
+                        if max(segment_start, turn.start) < min(segment_end, turn.end):
+                            speaker = label
+                            break
+
+                    transcription_output.append({
+                        "speaker": speaker,
+                        "text": segment['text'].strip(),
+                        "start_time": segment_start,
+                        "end_time": segment_end
+                    })
             else:
                 # No diarization, just transcription
                 for segment in segments:
@@ -141,10 +148,10 @@ class BlogTitleSuggestionView(APIView):
 
         try:
             # Generate title suggestions
-            
+            prompt_text = "headline: " + content
             suggestions = []
             for _ in range(3): 
-                generated_text = title_suggestion_pipeline(content, max_new_tokens=20, num_return_sequences=1, do_sample=True, top_k=50, top_p=0.95)[0]['summary_text']
+                generated_text = title_suggestion_pipeline(prompt_text, max_new_tokens=20, num_return_sequences=1)[0]['generated_text']
                 suggestions.append(generated_text.strip())
 
             # Save title suggestion result to database
