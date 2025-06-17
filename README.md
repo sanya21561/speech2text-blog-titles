@@ -177,5 +177,10 @@ In this blog, we will explore the top 7 LLM, data science, and AI blogs of 2024 
 - `login_page.png` — Example login/registration page
 - `manage.py` - Django's command-line utility for administrative tasks
 - `api/` - Django backend app
+- `templates/` - HTML templates for the frontend
+- `static/` - Static files (CSS, JS, images)
+- `db.sqlite3` - SQLite database file
+- `requirements.txt` - Python dependencies
+- `README.md` - Project documentation
 
 ---
