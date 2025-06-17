@@ -10,6 +10,13 @@ import json
 import torchaudio
 import numpy as np
 from transformers import pipeline
+from .models import TranscriptionResult, TitleSuggestion
+from django.contrib.auth.models import User
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authtoken.models import Token
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.settings import api_settings
+from .serializers import UserSerializer
 
 load_dotenv()
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
@@ -17,28 +24,48 @@ HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 if not HUGGINGFACE_TOKEN:
     print("Warning: HUGGINGFACE_TOKEN not found in .env file. Diarization will not work.")
 
-# Load Whisper model
-whisper_model = whisper.load_model("base")
-
-# Load Pyannote Audio pipeline (requires HuggingFace token)
+# Global variables to store loaded models
+whisper_model = None
 diarization_pipeline = None
-if HUGGINGFACE_TOKEN:
-    try:
-        diarization_pipeline = Pipeline.from_pretrained(
-            "pyannote/speaker-diarization-3.1",
-            use_auth_token=HUGGINGFACE_TOKEN
-        )
-    except Exception as e:
-        print(f"Error loading diarization pipeline: {e}")
-        diarization_pipeline = None
+title_suggestion_pipeline = None
+models_loaded = False
 
-# Load NLP model for title suggestions
-title_suggestion_pipeline = pipeline("summarization", model="pszemraj/long-t5-tglobal-xl-16384-book-summary")
+def _load_models():
+    global whisper_model, diarization_pipeline, title_suggestion_pipeline, models_loaded
+    if models_loaded:
+        return
+
+    print("Loading models... This may take some time the first time.")
+    # Load Whisper model
+    whisper_model = whisper.load_model("base")
+
+    # Load Pyannote Audio pipeline (requires HuggingFace token)
+    if HUGGINGFACE_TOKEN:
+        try:
+            diarization_pipeline = Pipeline.from_pretrained(
+                "pyannote/speaker-diarization-3.1",
+                use_auth_token=HUGGINGFACE_TOKEN
+            )
+        except Exception as e:
+            print(f"Error loading diarization pipeline: {e}")
+            diarization_pipeline = None
+    else:
+        print("HUGGINGFACE_TOKEN not set, diarization pipeline will not be loaded.")
+
+    # Load NLP model for title suggestions
+    title_suggestion_pipeline = pipeline("summarization", model="pszemraj/long-t5-tglobal-xl-16384-book-summary")
+    
+    models_loaded = True
+    print("Models loaded successfully.")
 
 # Create your views here.
 
 class AudioTranscriptionView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, *args, **kwargs):
+        _load_models() # Ensure models are loaded when a request comes in
+
         if 'audio_file' not in request.FILES:
             return Response({'error': 'No audio file provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -65,23 +92,16 @@ class AudioTranscriptionView(APIView):
                 diarization = diarization_pipeline({"waveform": waveform, "sample_rate": sample_rate})
 
                 # Process segments and assign speakers
-                for segment in segments:
-                    start = segment['start']
-                    end = segment['end']
-                    text = segment['text']
-                    
-                    speaker = "UNKNOWN_SPEAKER"
-                    # Find dominant speaker in the segment
-                    for turn, track, label in diarization.crop(f={"waveform": waveform, "sample_rate": sample_rate}, focus=segment):
-                        speaker = label
-                        break # Take the first speaker found in the segment
+                for turn, track, label in diarization.crop(f={"waveform": waveform, "sample_rate": sample_rate}, focus=segment):
+                    speaker = label
+                    break # Take the first speaker found in the segment
 
-                    transcription_output.append({
-                        "speaker": speaker,
-                        "text": text.strip(),
-                        "start_time": start,
-                        "end_time": end
-                    })
+                transcription_output.append({
+                    "speaker": speaker,
+                    "text": text.strip(),
+                    "start_time": start,
+                    "end_time": end
+                })
             else:
                 # No diarization, just transcription
                 for segment in segments:
@@ -94,6 +114,14 @@ class AudioTranscriptionView(APIView):
 
             os.remove('temp_audio.wav') # Clean up temp file
 
+            # Save transcription result to database
+            TranscriptionResult.objects.create(
+                audio_file_name=audio_file.name,
+                transcription_text=result['text'],
+                diarization_json=json.dumps(transcription_output) if diarization_pipeline else None,
+                user=request.user 
+            )
+
             return Response({'transcription': transcription_output}, status=status.HTTP_200_OK)
 
         except Exception as e:
@@ -102,7 +130,10 @@ class AudioTranscriptionView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class BlogTitleSuggestionView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, *args, **kwargs):
+        _load_models() # Ensure models are loaded when a request comes in
         content = request.data.get('content')
 
         if not content:
@@ -110,25 +141,64 @@ class BlogTitleSuggestionView(APIView):
 
         try:
             # Generate title suggestions
-            # We'll generate a single long summary and then split it into 3 parts,
-            # or generate 3 distinct short summaries if the model supports it.
-            # For simplicity, let's assume the model generates one summary.
-            # We'll then try to split it or make multiple calls if needed.
-
-            # A common approach for title generation is to use a summarization model
-            # and then potentially rephrase/extract keywords for multiple titles.
-            # Since the model is 't5-large-generation-tldr', it's designed for 'Too Long; Didn't Read'
-            # which means summarization. We'll generate a few short summaries.
             
             suggestions = []
-            for _ in range(3): # Attempt to generate 3 distinct suggestions
-                # For a tldr model, we might need to prompt it differently or extract different aspects
-                # For now, let's just use the default generation and take the first few words as a title
-                # In a more advanced scenario, we'd fine-tune a model for title generation specifically
-                generated_text = title_suggestion_pipeline(content, max_new_tokens=20, num_return_sequences=1, do_sample=True, top_k=50, top_p=0.95)[0]['generated_text']
+            for _ in range(3): 
+                generated_text = title_suggestion_pipeline(content, max_new_tokens=20, num_return_sequences=1, do_sample=True, top_k=50, top_p=0.95)[0]['summary_text']
                 suggestions.append(generated_text.strip())
+
+            # Save title suggestion result to database
+            TitleSuggestion.objects.create(
+                original_content=content,
+                suggested_titles_json=json.dumps(suggestions),
+                user=request.user
+            )
 
             return Response({'suggestions': suggestions}, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class RegisterUserView(APIView):
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({'token': token.key, 'user_id': user.pk, 'username': user.username}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class LoginUserView(ObtainAuthToken):
+    renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
+
+class UserHistoryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        transcriptions = TranscriptionResult.objects.filter(user=user).order_by('-created_at')
+        titles = TitleSuggestion.objects.filter(user=user).order_by('-created_at')
+
+        history_data = {
+            "transcriptions": [],
+            "title_suggestions": []
+        }
+
+        for t in transcriptions:
+            history_data["transcriptions"].append({
+                "id": t.id,
+                "audio_file_name": t.audio_file_name,
+                "transcription_text": t.transcription_text,
+                "diarization_json": json.loads(t.diarization_json) if t.diarization_json else None,
+                "created_at": t.created_at.isoformat()
+            })
+        
+        for ts in titles:
+            history_data["title_suggestions"].append({
+                "id": ts.id,
+                "original_content": ts.original_content,
+                "suggested_titles": json.loads(ts.suggested_titles_json),
+                "created_at": ts.created_at.isoformat()
+            })
+
+        return Response(history_data, status=status.HTTP_200_OK)

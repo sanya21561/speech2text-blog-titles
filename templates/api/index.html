@@ -13,59 +13,311 @@
             padding: 1rem;
             margin-top: 1rem;
             white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
         }
+        .hidden { display: none; }
+        .user-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .history-item { border-bottom: 1px solid #eee; padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
+        .history-item:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 class="mb-4">Speech to Text & Blog Title Generator</h1>
-        
-        <!-- Audio Transcription Form -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h2 class="h5 mb-0">Audio Transcription</h2>
+
+        <!-- Auth Section -->
+        <div id="authSection" class="">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Register</h2>
+                </div>
+                <div class="card-body">
+                    <form id="registerForm">
+                        <div class="mb-3">
+                            <label for="registerUsername" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="registerUsername" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="registerPassword" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="registerPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-success">Register</button>
+                    </form>
+                    <div id="registerMessage" class="mt-2"></div>
+                </div>
             </div>
-            <div class="card-body">
-                <form id="transcriptionForm" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label for="audioFile" class="form-label">Upload Audio File</label>
-                        <input type="file" class="form-control" id="audioFile" name="audio_file" accept="audio/*" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Transcribe</button>
-                </form>
-                <div id="transcriptionResult" class="result-box mt-3" style="display: none;"></div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Login</h2>
+                </div>
+                <div class="card-body">
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label for="loginUsername" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="loginUsername" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="loginPassword" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="loginPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </form>
+                    <div id="loginMessage" class="mt-2"></div>
+                </div>
             </div>
         </div>
 
-        <!-- Blog Title Suggestion Form -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="h5 mb-0">Blog Title Suggestions</h2>
+        <!-- Main Application Section (Hidden by default) -->
+        <div id="appSection" class="hidden">
+            <div class="user-info">
+                <span id="welcomeMessage" class="h5"></span>
+                <button id="logoutButton" class="btn btn-danger btn-sm">Logout</button>
             </div>
-            <div class="card-body">
-                <form id="titleSuggestionForm">
-                    <div class="mb-3">
-                        <label for="blogContent" class="form-label">Blog Content</label>
-                        <textarea class="form-control" id="blogContent" name="content" rows="5" required></textarea>
+
+            <!-- Audio Transcription Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Audio Transcription</h2>
+                </div>
+                <div class="card-body">
+                    <form id="transcriptionForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="audioFile" class="form-label">Upload Audio File</label>
+                            <input type="file" class="form-control" id="audioFile" name="audio_file" accept="audio/*" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Transcribe</button>
+                    </form>
+                    <div id="transcriptionResult" class="result-box mt-3" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Blog Title Suggestion Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Blog Title Suggestions</h2>
+                </div>
+                <div class="card-body">
+                    <form id="titleSuggestionForm">
+                        <div class="mb-3">
+                            <label for="blogContent" class="form-label">Blog Content</label>
+                            <textarea class="form-control" id="blogContent" name="content" rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Generate Titles</button>
+                    </form>
+                    <div id="titleSuggestions" class="result-box mt-3" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- User History Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Your History</h2>
+                </div>
+                <div class="card-body">
+                    <div id="userHistory" class="result-box">
+                        <p class="text-muted">Loading history...</p>
                     </div>
-                    <button type="submit" class="btn btn-primary">Generate Titles</button>
-                </form>
-                <div id="titleSuggestions" class="result-box mt-3" style="display: none;"></div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Handle Audio Transcription
-        document.getElementById('transcriptionForm').addEventListener('submit', async (e) => {
+        const authSection = document.getElementById('authSection');
+        const appSection = document.getElementById('appSection');
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        const logoutButton = document.getElementById('logoutButton');
+        const userHistoryDiv = document.getElementById('userHistory');
+
+        const registerForm = document.getElementById('registerForm');
+        const loginForm = document.getElementById('loginForm');
+        const transcriptionForm = document.getElementById('transcriptionForm');
+        const titleSuggestionForm = document.getElementById('titleSuggestionForm');
+
+        const registerMessage = document.getElementById('registerMessage');
+        const loginMessage = document.getElementById('loginMessage');
+
+        let authToken = localStorage.getItem('authToken');
+        let currentUsername = localStorage.getItem('currentUsername');
+
+        // Function to update UI based on login status
+        function updateUI() {
+            if (authToken && currentUsername) {
+                authSection.classList.add('hidden');
+                appSection.classList.remove('hidden');
+                welcomeMessage.textContent = `Welcome, ${currentUsername}!`;
+                fetchUserHistory();
+            } else {
+                authSection.classList.remove('hidden');
+                appSection.classList.add('hidden');
+                welcomeMessage.textContent = '';
+                userHistoryDiv.innerHTML = '<p class="text-muted">Login to view your history.</p>';
+            }
+        }
+
+        // Function to fetch user history
+        async function fetchUserHistory() {
+            if (!authToken) return;
+
+            userHistoryDiv.innerHTML = '<p class="text-muted">Loading history...</p>';
+
+            try {
+                const response = await fetch('/api/history/', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Token ${authToken}`
+                    }
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    let historyHtml = '<h4>Transcriptions</h4>';
+                    if (data.transcriptions && data.transcriptions.length > 0) {
+                        data.transcriptions.forEach(t => {
+                            historyHtml += `<div class="history-item">
+                                <p><strong>File:</strong> ${t.audio_file_name || 'N/A'}</p>
+                                <p><strong>Text:</strong> ${t.transcription_text}</p>
+                                <p><small>Created at: ${new Date(t.created_at).toLocaleString()}</small></p>
+                            </div>`;
+                        });
+                    } else {
+                        historyHtml += '<p>No transcriptions yet.</p>';
+                    }
+
+                    historyHtml += '<h4 class="mt-4">Title Suggestions</h4>';
+                    if (data.title_suggestions && data.title_suggestions.length > 0) {
+                        data.title_suggestions.forEach(ts => {
+                            historyHtml += `<div class="history-item">
+                                <p><strong>Original Content:</strong> ${ts.original_content.substring(0, 100)}...</p>
+                                <p><strong>Suggested Titles:</strong></p>
+                                <ul>`;
+                            ts.suggested_titles.forEach(title => {
+                                historyHtml += `<li>${title}</li>`;
+                            });
+                            historyHtml += `</ul>
+                                <p><small>Created at: ${new Date(ts.created_at).toLocaleString()}</small></p>
+                            </div>`;
+                        });
+                    } else {
+                        historyHtml += '<p>No title suggestions yet.</p>';
+                    }
+                    userHistoryDiv.innerHTML = historyHtml;
+                } else {
+                    userHistoryDiv.innerHTML = `<p class="text-danger">Error fetching history: ${data.detail || 'Unknown error'}</p>`;
+                }
+            } catch (error) {
+                console.error('Error fetching history:', error);
+                userHistoryDiv.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Handle Registration
+        registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const username = document.getElementById('registerUsername').value;
+            const password = document.getElementById('registerPassword').value;
+
+            try {
+                const response = await fetch('/api/register/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    registerMessage.className = 'mt-2 text-success';
+                    registerMessage.textContent = 'Registration successful! Please log in.';
+                    // Clear the form
+                    registerForm.reset();
+                } else {
+                    registerMessage.className = 'mt-2 text-danger';
+                    registerMessage.textContent = 'Registration failed: ' + JSON.stringify(data);
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                registerMessage.className = 'mt-2 text-danger';
+                registerMessage.textContent = 'An error occurred during registration.';
+            }
+        });
+
+        // Handle Login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const response = await fetch('/api/login/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.token) {
+                    authToken = data.token;
+                    currentUsername = username;
+                    localStorage.setItem('authToken', authToken);
+                    localStorage.setItem('currentUsername', currentUsername);
+                    loginMessage.className = 'mt-2 text-success';
+                    loginMessage.textContent = 'Login successful!';
+                    loginForm.reset(); // Clear form
+                    updateUI();
+                } else {
+                    authToken = null;
+                    currentUsername = null;
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('currentUsername');
+                    loginMessage.className = 'mt-2 text-danger';
+                    loginMessage.textContent = 'Login failed: ' + (data.non_field_errors ? data.non_field_errors[0] : JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                loginMessage.className = 'mt-2 text-danger';
+                loginMessage.textContent = 'An error occurred during login.';
+            }
+        });
+
+        // Handle Logout
+        logoutButton.addEventListener('click', () => {
+            authToken = null;
+            currentUsername = null;
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUsername');
+            updateUI();
+            alert('You have been logged out.');
+        });
+
+        // Helper to get auth headers
+        function getAuthHeaders() {
+            return authToken ? { 'Authorization': `Token ${authToken}` } : {};
+        }
+
+        // Handle Audio Transcription
+        transcriptionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!authToken) {
+                alert('Please login to transcribe audio.');
+                return;
+            }
+
             const formData = new FormData();
             const audioFile = document.getElementById('audioFile').files[0];
             formData.append('audio_file', audioFile);
 
+            const headers = getAuthHeaders();
+
             try {
                 const response = await fetch('/api/transcribe/', {
                     method: 'POST',
+                    headers: headers, // Pass auth headers
                     body: formData
                 });
                 const data = await response.json();
@@ -73,14 +325,15 @@
                 const resultDiv = document.getElementById('transcriptionResult');
                 resultDiv.style.display = 'block';
                 
-                if (data.transcription) {
+                if (response.ok && data.transcription) {
                     let html = '<h3 class="h6">Transcription Result:</h3>';
                     data.transcription.forEach(segment => {
                         html += `<p><strong>${segment.speaker || 'Unknown'}:</strong> ${segment.text}</p>`;
                     });
                     resultDiv.innerHTML = html;
+                    fetchUserHistory(); // Refresh history after successful transcription
                 } else {
-                    resultDiv.textContent = 'Error: ' + (data.error || 'Unknown error occurred');
+                    resultDiv.textContent = 'Error: ' + (data.detail || data.error || 'Unknown error occurred');
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -89,16 +342,23 @@
         });
 
         // Handle Title Suggestions
-        document.getElementById('titleSuggestionForm').addEventListener('submit', async (e) => {
+        titleSuggestionForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!authToken) {
+                alert('Please login to generate titles.');
+                return;
+            }
+
             const content = document.getElementById('blogContent').value;
+            const headers = {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders() // Merge auth headers
+            };
 
             try {
                 const response = await fetch('/api/suggest-titles/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: headers,
                     body: JSON.stringify({ content })
                 });
                 const data = await response.json();
@@ -106,21 +366,26 @@
                 const resultDiv = document.getElementById('titleSuggestions');
                 resultDiv.style.display = 'block';
                 
-                if (data.suggestions) {
+                if (response.ok && data.suggestions) {
                     let html = '<h3 class="h6">Suggested Titles:</h3><ul>';
                     data.suggestions.forEach(title => {
                         html += `<li>${title}</li>`;
                     });
                     html += '</ul>';
                     resultDiv.innerHTML = html;
+                    fetchUserHistory(); // Refresh history after successful suggestion
                 } else {
-                    resultDiv.textContent = 'Error: ' + (data.error || 'Unknown error occurred');
+                    resultDiv.textContent = 'Error: ' + (data.detail || data.error || 'Unknown error occurred');
                 }
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('titleSuggestions').textContent = 'Error: ' + error.message;
             }
         });
+
+        // Initial UI update
+        updateUI();
+
     </script>
 </body>
 </html> 
