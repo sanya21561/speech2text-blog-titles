@@ -9,19 +9,19 @@ A Django web app for:
 
 ## Project Structure
 
-```
 speech2text_blog_titles/
-├── api/                # Django app with API endpoints and logic
-├── speech2text_blog/   # Django project settings
-├── templates/api/      # Frontend HTML (single-page app)
-├── speech2text_example/
+├── api/                    # Django app with API endpoints and logic
+├── speech2text_blog/       # Django project settings
+├── templates/api/          # Frontend HTML (single-page app)
+├── speech2text_example/    # Example audio and output
 │   ├── Conversation 1.mp3
 │   └── conversation1_transcription.png
-├── blog_sample_output.png
-├── login_page.png
-├── db.sqlite3          # SQLite database (created after first run)
-├── requirements.txt
-├── README.md
+├── blog_sample_output.png  # Example blog title output
+├── login_page.png          # Example login/registration page
+├── db.sqlite3              # SQLite database (created after first run)
+├── requirements.txt        # Python dependencies
+├── README.md               # Project documentation
+├── manage.py               # Django's command-line utility
 └── ...
 ```
 
@@ -175,12 +175,5 @@ In this blog, we will explore the top 7 LLM, data science, and AI blogs of 2024 
 - `speech2text_example/conversation1_transcription.png` — Example diarized transcript
 - `blog_sample_output.png` — Example blog title output
 - `login_page.png` — Example login/registration page
-- `manage.py` - Django's command-line utility for administrative tasks
-- `api/` - Django backend app
-- `templates/` - HTML templates for the frontend
-- `static/` - Static files (CSS, JS, images)
-- `db.sqlite3` - SQLite database file
-- `requirements.txt` - Python dependencies
-- `README.md` - Project documentation
 
 ---
