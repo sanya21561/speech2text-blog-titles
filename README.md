@@ -175,5 +175,7 @@ In this blog, we will explore the top 7 LLM, data science, and AI blogs of 2024 
 - `speech2text_example/conversation1_transcription.png` — Example diarized transcript
 - `blog_sample_output.png` — Example blog title output
 - `login_page.png` — Example login/registration page
+- `manage.py` - Django's command-line utility for administrative tasks
+- `api/` - Django backend app
 
 ---
