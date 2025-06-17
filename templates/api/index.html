@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech to Text & Blog Title Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .container { max-width: 800px; margin-top: 2rem; }
+        .result-box { 
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 1rem;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">Speech to Text & Blog Title Generator</h1>
+        
+        <!-- Audio Transcription Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Audio Transcription</h2>
+            </div>
+            <div class="card-body">
+                <form id="transcriptionForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="audioFile" class="form-label">Upload Audio File</label>
+                        <input type="file" class="form-control" id="audioFile" name="audio_file" accept="audio/*" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Transcribe</button>
+                </form>
+                <div id="transcriptionResult" class="result-box mt-3" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Blog Title Suggestion Form -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Blog Title Suggestions</h2>
+            </div>
+            <div class="card-body">
+                <form id="titleSuggestionForm">
+                    <div class="mb-3">
+                        <label for="blogContent" class="form-label">Blog Content</label>
+                        <textarea class="form-control" id="blogContent" name="content" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Generate Titles</button>
+                </form>
+                <div id="titleSuggestions" class="result-box mt-3" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Handle Audio Transcription
+        document.getElementById('transcriptionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            const audioFile = document.getElementById('audioFile').files[0];
+            formData.append('audio_file', audioFile);
+
+            try {
+                const response = await fetch('/api/transcribe/', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('transcriptionResult');
+                resultDiv.style.display = 'block';
+                
+                if (data.transcription) {
+                    let html = '<h3 class="h6">Transcription Result:</h3>';
+                    data.transcription.forEach(segment => {
+                        html += `<p><strong>${segment.speaker || 'Unknown'}:</strong> ${segment.text}</p>`;
+                    });
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.textContent = 'Error: ' + (data.error || 'Unknown error occurred');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('transcriptionResult').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        // Handle Title Suggestions
+        document.getElementById('titleSuggestionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const content = document.getElementById('blogContent').value;
+
+            try {
+                const response = await fetch('/api/suggest-titles/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ content })
+                });
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('titleSuggestions');
+                resultDiv.style.display = 'block';
+                
+                if (data.suggestions) {
+                    let html = '<h3 class="h6">Suggested Titles:</h3><ul>';
+                    data.suggestions.forEach(title => {
+                        html += `<li>${title}</li>`;
+                    });
+                    html += '</ul>';
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.textContent = 'Error: ' + (data.error || 'Unknown error occurred');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('titleSuggestions').textContent = 'Error: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html> 
