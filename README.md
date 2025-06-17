@@ -154,7 +154,7 @@ These blogs stand out as they make deep, complex topics easy to understand for a
   - [openai/whisper](https://github.com/openai/whisper) ("base" model, supports English, Hindi, and many other languages)
   - [pyannote/speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1) for speaker separation
 - **Blog Title Suggestions:**
-  - [Michau/t5-base-en-generate-headline](https://huggingface.co/JulesBelveze/t5-small-headline-generator) (T5-small, fine-tuned for headlines)
+  - [Michau/t5-base-en-generate-headline](https://huggingface.co/JulesBelveze/t5-small-headline-generator) (T5-base, fine-tuned for headlines)
 
 ---
 
