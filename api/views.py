@@ -33,7 +33,7 @@ if HUGGINGFACE_TOKEN:
         diarization_pipeline = None
 
 # Load NLP model for title suggestions
-title_suggestion_pipeline = pipeline("text2text-generation", model="Babelscape/t5-large-generation-tldr")
+title_suggestion_pipeline = pipeline("summarization", model="pszemraj/long-t5-tglobal-xl-16384-book-summary")
 
 # Create your views here.
 
