@@ -1,4 +1,4 @@
-# Speech2Text Blog Titles
+# Speech2Text Diarization and Blog Titles Generator
 
 A Django web app for:
 - **Speaker-diarized audio transcription** (using Whisper + pyannote.audio)
